@@ -1,0 +1,75 @@
+version: "3.9"
+
+# ── Jarvina — JarvisLabs Voice Assistant ──────────────────────────────────────
+#
+# Services:
+#   vllm   — Sarvam-30B LLM (OpenAI-compat API on port 8001)
+#   api    — FastAPI WebSocket + pipeline + ASR + TTS + RAG (port 8000)
+#
+# All services share GPU 0 (A100 40GB).
+# ChromaDB is embedded inside the api container (PersistentClient, no separate service).
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in LLM_MODEL / HF_TOKEN
+#   2. docker-compose up --build
+# ──────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  vllm:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.vllm
+    image: jarvina-vllm
+    container_name: jarvina_vllm
+    restart: unless-stopped
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    command: >
+      --model ${LLM_MODEL:-sarvamai/sarvam-m}
+      --quantization awq
+      --dtype float16
+      --max-model-len 4096
+      --gpu-memory-utilization 0.55
+      --host 0.0.0.0
+      --port 8001
+    ports:
+      - "8001:8001"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    image: jarvina-api
+    container_name: jarvina_api
+    restart: unless-stopped
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - VLLM_BASE_URL=http://vllm:8001/v1
+      - LLM_MODEL=${LLM_MODEL:-sarvamai/sarvam-m}
+      - TTS_BACKEND=${TTS_BACKEND:-voxtral}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - HOST=0.0.0.0
+      - PORT=8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data           # persists ChromaDB + scraped data
+      - hf_cache:/root/.cache/huggingface
+    depends_on:
+      vllm:
+        condition: service_healthy
+
+volumes:
+  hf_cache:

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jarvina — JarvisLabs Voice Assistant</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">Jarvina</span>
+        <span class="logo-sub">by JarvisLabs</span>
+      </div>
+      <div class="status-badge" id="statusBadge">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Connecting…</span>
+      </div>
+    </header>
+
+    <!-- Conversation -->
+    <main class="conversation" id="conversation">
+      <div class="welcome-msg" id="welcomeMsg">
+        <div class="welcome-icon">🎙️</div>
+        <h2>Ask me anything about JarvisLabs</h2>
+        <p>GPU cloud, pricing, setup guides, SSH, training — I've got you covered.<br/>
+           Speak in English, Hindi, या Hinglish — your choice.</p>
+      </div>
+    </main>
+
+    <!-- Latency bar -->
+    <div class="latency-bar" id="latencyBar" style="display:none">
+      <span id="latASR">ASR —</span>
+      <span id="latRAG">RAG —</span>
+      <span id="latLLM">LLM —</span>
+      <span id="latTTS">TTS —</span>
+      <span id="latTotal">Total —</span>
+    </div>
+
+    <!-- Mic button -->
+    <footer class="footer">
+      <div class="mic-area">
+        <div class="visualizer" id="visualizer">
+          <canvas id="waveCanvas" width="200" height="60"></canvas>
+        </div>
+        <button class="mic-btn" id="micBtn" title="Always listening with VAD">
+          <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <button class="reset-btn" id="resetBtn" title="Clear conversation">↺ Reset</button>
+      </div>
+    </footer>
+
+  </div>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

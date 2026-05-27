@@ -1,0 +1,61 @@
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+*.env
+
+# ── Data (large / generated) ──────────────────────────────────────────────────
+data/
+# If you want to commit raw scraped JSON but not the vector DB:
+# !data/raw/
+# data/chroma/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# ── Virtual envs ──────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Model cache (HuggingFace downloads) ───────────────────────────────────────
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+models/
+hf_cache/
+
+# ── Audio artifacts ───────────────────────────────────────────────────────────
+*.wav
+*.mp3
+*.ogg
+*.flac
+# Keep the sample audio if you add one for the README
+# !scripts/test_audio.wav
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Docker volumes (if mapped locally) ───────────────────────────────────────
+docker/volumes/

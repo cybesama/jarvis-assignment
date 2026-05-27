@@ -1,0 +1,11 @@
+FROM vllm/vllm-openai:v0.6.6
+
+# vLLM base image already has CUDA + Python + vllm installed.
+# We just expose the OpenAI-compatible endpoint.
+
+ENV HUGGING_FACE_HUB_TOKEN=""
+
+EXPOSE 8001
+
+# Model is passed at runtime via --model flag in docker-compose.yml
+# e.g.: --model sarvamai/sarvam-m --quantization awq

@@ -1,0 +1,45 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+websockets>=14.0
+python-multipart>=0.0.20
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+python-dotenv>=1.0.0
+loguru>=0.7.0
+aiofiles>=24.1.0
+httpx>=0.28.0            # used to stream from vLLM REST API
+
+# ── ASR — NVIDIA Parakeet RNNT (NeMo) ─────────────────────────────────────────
+nemo_toolkit[asr]>=2.2.0
+torch>=2.5.0
+torchaudio>=2.5.0
+
+# ── LLM — Sarvam-30B served via vLLM (install vLLM on the GPU server) ─────────
+vllm>=0.6.6
+
+# ── TTS — Voxtral (mistralai/Voxtral-Mini-3B-2507) ────────────────────────────
+mistral-inference>=1.5.0
+mistralai>=1.2.0           # cloud API fallback
+soundfile>=0.12.0
+
+# ── VAD — silero-vad v5 ───────────────────────────────────────────────────────
+silero-vad>=5.1.2
+
+# ── RAG — BGE-M3 + ChromaDB ───────────────────────────────────────────────────
+chromadb>=0.6.0
+FlagEmbedding>=1.3.0
+langchain>=0.3.0
+langchain-community>=0.3.0
+
+# ── Scraper ───────────────────────────────────────────────────────────────────
+beautifulsoup4>=4.12.0
+lxml>=5.3.0
+
+# ── Audio utils ───────────────────────────────────────────────────────────────
+numpy>=1.26.0
+librosa>=0.10.0
+
+# ── Dev / benchmarking ────────────────────────────────────────────────────────
+rich>=13.9.0
+typer>=0.13.0
