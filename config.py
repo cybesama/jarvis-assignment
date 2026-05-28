@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # TTS — Voxtral (primary) | Kokoro-82M (fallback)
     TTS_BACKEND: str = "kokoro"           # "voxtral" | "kokoro"
     TTS_VOXTRAL_URL: str = "http://localhost:8002"
-    TTS_SAMPLE_RATE: int = 24000
+    TTS_SAMPLE_RATE: int = 44100
     TTS_VOICE: str = "af_heart"           # Kokoro voice; override for Voxtral
 
     # VAD — silero-vad v5
