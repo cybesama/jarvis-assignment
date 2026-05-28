@@ -1,5 +1,5 @@
 """
-Async streaming LLM client for Sarvam-30B served via vLLM.
+Async streaming LLM client for Qwen3-32B-AWQ served via vLLM.
 Uses vLLM's OpenAI-compatible /v1/chat/completions endpoint directly
 with httpx so there's no openai SDK dependency.
 """
@@ -33,6 +33,7 @@ async def stream_response(
         "temperature": settings.LLM_TEMPERATURE,
         "top_p": settings.LLM_TOP_P,
         "stream": True,
+        "chat_template_kwargs": {"enable_thinking": False},
     }
 
     url = f"{settings.VLLM_BASE_URL}/chat/completions"

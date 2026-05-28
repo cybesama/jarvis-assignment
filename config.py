@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     ASR_SAMPLE_RATE: int = 16000
     ASR_CHUNK_DURATION_MS: int = 100
 
-    # LLM — Sarvam-30B via vLLM (OpenAI-compatible endpoint)
+    # LLM — Qwen3-32B-AWQ via vLLM (~18GB VRAM)
     VLLM_BASE_URL: str = "http://localhost:8001/v1"
-    LLM_MODEL: str = "sarvamai/sarvam-m"   # swap to exact HF name when confirmed
+    LLM_MODEL: str = "Qwen/Qwen3-32B-AWQ"
     LLM_MAX_TOKENS: int = 300
     LLM_TEMPERATURE: float = 0.3
     LLM_TOP_P: float = 0.9
