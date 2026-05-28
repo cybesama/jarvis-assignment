@@ -20,7 +20,7 @@ from loguru import logger
 from asr.parakeet import asr
 from llm.client import stream_response
 from rag.retriever import retriever
-from tts.voxtral import tts, split_sentences
+from tts.fish_speech import tts, split_sentences
 from pipeline.vad import VADProcessor
 from config import settings
 
