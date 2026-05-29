@@ -26,7 +26,7 @@ class FishSpeechTTS:
 
     LLAMA_CKPT  = "/home/models/fish-speech-1.5"
     DAC_CKPT    = "/home/models/fish-speech-1.5/firefly-gan-vq-fsq-8x1024-21hz-generator.pth"
-    DAC_CONFIG  = "modded_dac_vq"
+    DAC_CONFIG  = "firefly_1_5"
 
     def __init__(self):
         self._engine = None
