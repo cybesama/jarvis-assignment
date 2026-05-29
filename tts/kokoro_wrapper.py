@@ -14,7 +14,7 @@ from loguru import logger
 
 from config import settings
 
-_SENTENCE_END = re.compile(r"(?<=[.!?।,;])\s+")
+_SENTENCE_END = re.compile(r"(?<=[.!?।])\s+")
 
 
 def split_sentences(text: str) -> list[str]:
