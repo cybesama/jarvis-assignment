@@ -181,19 +181,23 @@ class ConversationSession:
             full_text += token
             await self.callbacks.on_response_text(token)
 
-            # Check for sentence boundaries
+            # Flush on sentence boundary OR after ~100 chars at a word boundary
             sentences = split_sentences(token_buffer)
+            flush_phrases = []
             if len(sentences) >= 2:
-                # All but the last (possibly incomplete) sentence are ready
-                ready = sentences[:-1]
+                flush_phrases = sentences[:-1]
                 token_buffer = sentences[-1]
-                for s in ready:
-                    if s.strip():
-                        task = asyncio.create_task(
-                            synthesize_and_send(s, is_first=first_sentence)
-                        )
-                        tts_tasks.append(task)
-                        first_sentence = False
+            elif len(token_buffer) >= 100 and token_buffer[-1] == " ":
+                flush_phrases = [token_buffer.strip()]
+                token_buffer = ""
+
+            for s in flush_phrases:
+                if s.strip():
+                    task = asyncio.create_task(
+                        synthesize_and_send(s, is_first=first_sentence)
+                    )
+                    tts_tasks.append(task)
+                    first_sentence = False
 
         latencies["llm_ms"] = round((time.perf_counter() - t_llm_start) * 1000)
 

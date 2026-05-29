@@ -15,7 +15,7 @@ from loguru import logger
 
 from config import settings
 
-_SENTENCE_END = re.compile(r"(?<=[.!?।])\s+")
+_SENTENCE_END = re.compile(r"(?<=[.!?।,;])\s+")
 
 # Hindi character range detection
 _HINDI_RE = re.compile(r"[ऀ-ॿ]")
