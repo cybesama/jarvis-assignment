@@ -16,7 +16,7 @@ I faced this problem myself. When I first tried to navigate JarvisLabs, I wasn't
 
 ## Try it yourself
 
-**Live:** [https://6bd4684165461.notebooksn.jarvislabs.net/](https://6bd4684165461.notebooksn.jarvislabs.net/)
+**Live:** [https://jarvis-assignment.vercel.app](https://jarvis-assignment.vercel.app)
 
 Open the link, click the mic button, and ask a question. The assistant responds in spoken audio.
 

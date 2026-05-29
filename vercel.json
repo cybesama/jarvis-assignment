@@ -2,6 +2,7 @@
   "outputDirectory": "frontend",
   "buildCommand": null,
   "rewrites": [
+    { "source": "/static/(.*)", "destination": "/$1" },
     { "source": "/(.*)", "destination": "/$1" }
   ]
 }
