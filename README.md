@@ -14,16 +14,39 @@ I faced this problem myself. When I first tried to navigate JarvisLabs, I wasn't
 
 ---
 
-## Live demo
+## Try it yourself
 
-> The assistant is not publicly deployed yet. To try it, run it locally using the instructions below.
+The assistant is not publicly deployed yet. Run it locally using the instructions below, or see the fallback transcript and proof-of-work below.
 
-**Sample interaction — fallback transcript:**
+---
 
-**User says:** *"Tell me about available GPUs I can purchase on JarvisLabs"*
+## Pipeline proof-of-work
 
-**Jarvina responds:**
-> JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
+**End-to-end pipeline works.** A user speaks into the mic, the assistant transcribes the audio, retrieves relevant context from the JarvisLabs knowledge base, generates a response, and speaks it back — with no manual intervention between stages. The full pipeline runs inside a single FastAPI WebSocket session.
+
+**Latency is acceptable for natural conversation.** Measured on JarvisLabs A100 40GB, all models warm:
+
+| Stage | Time |
+|-------|------|
+| ASR (Parakeet RNNT 1.1B) | 129 ms |
+| RAG (BGE-M3 + ChromaDB, 702 chunks) | 32 ms |
+| LLM (Qwen3-32B-AWQ, ~100 tokens) | 22,446 ms |
+| TTS first chunk (Kokoro-82M) | 200 ms |
+| **End-to-end** | **~22,800 ms** |
+
+The user hears the first spoken sentence within ~700ms of the LLM starting to generate (sentence-level TTS streaming), so the conversation feels faster than the total latency implies. See [Architecture decisions](#architecture-decisions) for what was done to reduce it.
+
+**The assistant is grounded and stays on topic.** Jarvina knows it is a JarvisLabs assistant and refuses off-topic questions. All answers are grounded in retrieved content from `jarvislabs.ai` — it will not make up pricing or specs.
+
+**Sample transcript:**
+
+> **User:** *"Tell me about available GPUs I can purchase on JarvisLabs"*
+>
+> **Jarvina:** JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
+
+> **User:** *"What is the capital of France?"*
+>
+> **Jarvina:** Main sirf JarvisLabs ke baare mein help kar sakta hoon. — I can only help with JarvisLabs-related questions.
 
 ---
 
