@@ -157,21 +157,30 @@ class ConversationSession:
 
         token_buffer = ""
         full_text = ""
-        tts_tasks: list[asyncio.Task] = []
         first_sentence = True
         t_llm_start = time.perf_counter()
 
-        async def synthesize_and_send(sentence: str, is_first: bool):
-            nonlocal latencies
-            t0 = time.perf_counter()
-            audio, tts_lat = await asyncio.get_event_loop().run_in_executor(
-                None, tts.synthesize, sentence
-            )
-            if is_first:
-                latencies["tts_first_ms"] = round(tts_lat * 1000)
+        # Serial TTS queue — Kokoro is not thread-safe; run one at a time
+        # but pipeline each phrase immediately as it's ready.
+        tts_queue: asyncio.Queue = asyncio.Queue()
 
-            audio_bytes = tts.audio_to_bytes(audio)
-            await self.callbacks.on_audio_chunk(audio_bytes)
+        async def tts_worker():
+            nonlocal latencies
+            while True:
+                item = await tts_queue.get()
+                if item is None:
+                    break
+                sentence, is_first = item
+                loop = asyncio.get_event_loop()
+                audio, tts_lat = await loop.run_in_executor(
+                    None, tts.synthesize, sentence
+                )
+                if is_first:
+                    latencies["tts_first_ms"] = round(tts_lat * 1000)
+                audio_bytes = tts.audio_to_bytes(audio)
+                await self.callbacks.on_audio_chunk(audio_bytes)
+
+        worker_task = asyncio.create_task(tts_worker())
 
         async for token in stream_response(query, context, history):
             if self._interrupt:
@@ -181,43 +190,32 @@ class ConversationSession:
             full_text += token
             await self.callbacks.on_response_text(token)
 
-            # Flush on sentence boundary OR after ~150 chars at a word boundary
+            # Flush on sentence boundary OR after ~60 chars at a word boundary
             sentences = split_sentences(token_buffer)
             flush_phrases = []
             if len(sentences) >= 2:
-                for s in sentences[:-1]:
-                    if len(s) >= 40:
-                        flush_phrases.append(s)
-                    else:
-                        # too short — merge into next chunk
-                        token_buffer = s + " " + sentences[-1]
-                        sentences = [token_buffer]
-                        break
-                else:
+                ready = [s for s in sentences[:-1] if len(s) >= 20]
+                if ready:
+                    flush_phrases = ready
                     token_buffer = sentences[-1]
-            elif len(token_buffer) >= 150 and token_buffer[-1] == " ":
+            elif len(token_buffer) >= 60 and token_buffer[-1] == " ":
                 flush_phrases = [token_buffer.strip()]
                 token_buffer = ""
 
             for s in flush_phrases:
                 if s.strip():
-                    task = asyncio.create_task(
-                        synthesize_and_send(s, is_first=first_sentence)
-                    )
-                    tts_tasks.append(task)
+                    await tts_queue.put((s, first_sentence))
                     first_sentence = False
 
         latencies["llm_ms"] = round((time.perf_counter() - t_llm_start) * 1000)
 
         # Flush remaining buffer
         if token_buffer.strip() and not self._interrupt:
-            task = asyncio.create_task(
-                synthesize_and_send(token_buffer, is_first=first_sentence)
-            )
-            tts_tasks.append(task)
+            await tts_queue.put((token_buffer.strip(), first_sentence))
 
-        # Wait for all TTS tasks to finish
-        if tts_tasks:
-            await asyncio.gather(*tts_tasks)
+        await tts_queue.put(None)  # signal worker to stop
+        worker_task_list = [worker_task]
+
+        await asyncio.gather(*worker_task_list)
 
         return full_text

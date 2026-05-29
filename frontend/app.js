@@ -144,7 +144,7 @@ function stopMic() {
 }
 
 micBtn.addEventListener("click", async () => {
-  ensurePlayCtx();   // unlock audio on first gesture
+  await ensurePlayCtx();   // unlock audio on first gesture
   if (micActive) {
     stopMic();
     setStatus("idle", "Mic off");
@@ -164,16 +164,16 @@ resetBtn.addEventListener("click", () => {
 });
 
 // ── TTS playback ──────────────────────────────────────────────────────────────
-function ensurePlayCtx() {
+async function ensurePlayCtx() {
   if (!playCtx || playCtx.state === "closed") {
     playCtx = new AudioContext({ sampleRate: PLAY_SR });
     nextPlayTime = 0;
   }
-  if (playCtx.state === "suspended") playCtx.resume();
+  if (playCtx.state === "suspended") await playCtx.resume();
 }
 
 async function enqueueAudio(wavBuffer) {
-  ensurePlayCtx();
+  await ensurePlayCtx();
   playQueue.push(wavBuffer);
   if (!isPlaying) drainQueue();
 }
@@ -181,7 +181,7 @@ async function enqueueAudio(wavBuffer) {
 async function drainQueue() {
   if (playQueue.length === 0) { isPlaying = false; return; }
   isPlaying = true;
-  ensurePlayCtx();
+  await ensurePlayCtx();
   const buf = playQueue.shift();
 
   try {
