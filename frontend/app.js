@@ -9,7 +9,7 @@
  *   WebSocket binary frames (WAV) → decode → AudioBuffer queue → AudioContext
  */
 
-const WS_URL  = `ws://${location.host}/ws`;
+const WS_URL  = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
 const PLAY_SR = 24000;   // TTS output sample rate
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
