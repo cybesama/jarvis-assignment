@@ -60,8 +60,8 @@ class ParakeetASR:
                 results = self._model.transcribe([tmp.name], batch_size=1)
 
         latency = time.perf_counter() - t0
-        transcript = results[0] if results else ""
-        transcript = transcript.strip()
+        raw = results[0] if results else ""
+        transcript = (raw.text if hasattr(raw, "text") else str(raw)).strip()
 
         logger.info(f"ASR: '{transcript}' ({latency*1000:.0f}ms)")
         return transcript, latency
