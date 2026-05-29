@@ -1,23 +1,37 @@
 # Jarvina — Voice Assistant for JarvisLabs
 
+---
+
 ## What it does
 
-JarvisLabs currently has no voice interface on its website — users must read through docs, pricing pages, and FAQs to find answers. Jarvina is an always-on voice assistant embedded in the JarvisLabs site that lets users ask questions out loud and hear accurate, grounded answers back within seconds. It handles English, Hindi, and Hinglish natively, covering GPU pricing, instance setup, SSH access, framework configuration, and general platform navigation.
+JarvisLabs' website has no voice interface — users have to hunt through docs, pricing pages, and FAQs manually to find answers. Jarvina sits on the JarvisLabs website and lets users simply ask questions out loud — about GPU plans, pricing, instance setup, SSH, or anything else on the platform — and hear a clear spoken answer back. It supports English, Hindi, and Hinglish, so it works naturally for the Indian developer audience that JarvisLabs primarily serves.
 
 ---
 
 ## Why I built this
 
-I ran into this problem myself. The first time I tried to spin up a GPU instance on JarvisLabs, I spent more time hunting through tabs than actually doing work — I wasn't sure which GPU fit my budget, how storage worked, or how to SSH in correctly. The documentation exists but navigating it takes effort. When I saw this problem again from the outside while thinking about what to build, it felt like an obvious gap: a platform built for developers running AI workloads should have an AI-native way to answer questions about itself. That made this worth building.
+I faced this problem myself. When I first tried to navigate JarvisLabs, I wasn't sure which GPU fit my use case, how persistent storage worked, or how to SSH into an instance correctly. The answers existed somewhere in the docs, but finding them took more time than it should have. When I thought about what to build, this felt like an obvious and real gap rather than a manufactured problem — a GPU cloud platform built for AI developers should have an AI-native way to answer questions about itself. I'd seen the frustration firsthand, so I decided to build the fix.
+
+---
+
+## Live demo
+
+> The assistant is not publicly deployed yet. To try it, run it locally using the instructions below.
+
+**Sample interaction — fallback transcript:**
+
+**User says:** *"Tell me about available GPUs I can purchase on JarvisLabs"*
+
+**Jarvina responds:**
+> JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
 
 ---
 
 ## How to run it
 
 ### Prerequisites
-- JarvisLabs A100 40GB instance (or equivalent)
+- JarvisLabs A100 40GB instance (or equivalent GPU with 30GB+ VRAM)
 - Python 3.10, CUDA 12+
-- ~30GB VRAM free before starting
 
 ### 1. Clone and install
 
@@ -34,7 +48,7 @@ pip install kokoro>=0.9.4
 cp .env.example .env
 ```
 
-Edit `.env`:
+Set the following in `.env`:
 
 ```env
 LLM_MODEL=Qwen/Qwen3-32B-AWQ
@@ -47,7 +61,7 @@ LLM_MAX_TOKENS=100
 TOP_K=3
 ```
 
-### 3. Start vLLM (LLM backend)
+### 3. Start vLLM
 
 ```bash
 FLASHINFER_DISABLE_VERSION_CHECK=1 python -m vllm.entrypoints.openai.api_server \
@@ -58,7 +72,7 @@ FLASHINFER_DISABLE_VERSION_CHECK=1 python -m vllm.entrypoints.openai.api_server 
   --port 8001 &
 ```
 
-Wait for `Application startup complete` before proceeding.
+Wait until the terminal shows `Application startup complete`.
 
 ### 4. Build the knowledge base (first run only)
 
@@ -66,9 +80,9 @@ Wait for `Application startup complete` before proceeding.
 python scripts/build_kb.py
 ```
 
-This scrapes `jarvislabs.ai`, chunks and embeds with BGE-M3, and stores in ChromaDB (~702 chunks).
+Scrapes `jarvislabs.ai`, chunks the content, embeds with BGE-M3, and stores in ChromaDB (~702 chunks).
 
-### 5. Start the API server
+### 5. Start the server
 
 ```bash
 python -m uvicorn api.server:app --host 0.0.0.0 --port 6006
@@ -76,112 +90,99 @@ python -m uvicorn api.server:app --host 0.0.0.0 --port 6006
 
 ### 6. Open in browser
 
-Navigate to `http://<your-instance-ip>:6006` — click the mic button, speak, and hear a response.
+Go to `http://<instance-ip>:6006`. Click the mic button, speak, hear the response.
 
-> **JarvisLabs port note:** When using JarvisLabs API endpoints, set your endpoint to forward to port `6006`. The public URL will look like `https://<instance-id>.notebooksn.jarvislabs.net/`.
+> **JarvisLabs users:** Set your API endpoint to forward to port `6006`. Your public URL will be `https://<instance-id>.notebooksn.jarvislabs.net/`.
+
+---
+
+## Model choices
+
+| Stage | Model |
+|-------|-------|
+| ASR | `nvidia/parakeet-rnnt-1.1b` |
+| VAD | `silero-vad v5` |
+| Embeddings | `BAAI/bge-m3` |
+| LLM | `Qwen/Qwen3-32B-AWQ` via vLLM |
+| TTS | `hexgrad/Kokoro-82M` (`af_heart` voice) |
 
 ---
 
 ## Architecture decisions
 
-### Qwen3-32B-AWQ as the LLM
+### Qwen3-32B-AWQ over other instruction-tuned models
 
-Most open-weight models that handle Hindi natively are large (30B+). Qwen3-32B-AWQ at 4-bit quantization fits comfortably in 18GB of VRAM, leaving room for ASR and embeddings on the same A100. It also supports English/Hindi/Hinglish without any fine-tuning. I disabled chain-of-thought reasoning (`enable_thinking: false`) because `<think>` tokens sent to TTS produce gibberish audio — a non-obvious failure mode that only shows up at runtime.
+The main constraint was fitting a multilingual model capable of fluent Hindi and Hinglish on a single A100 40GB alongside ASR and embedding models. Qwen3-32B-AWQ at 4-bit AWQ quantization uses ~18GB VRAM — just enough room. It handles Hindi natively without any fine-tuning, which no smaller open model does reliably. One non-obvious issue: Qwen3 defaults to chain-of-thought reasoning mode which emits `<think>...</think>` tokens — these get sent to TTS and produce gibberish audio. Disabling it via `enable_thinking: false` in the request payload is required.
 
-### Kokoro-82M for TTS instead of a cloud service
+### Kokoro-82M over a cloud TTS service
 
-Early versions used Edge TTS (Microsoft cloud). It worked but added ~1 second of network latency per phrase. Kokoro-82M runs locally on the GPU at ~150–200ms per phrase with no network round trip and no API key. The trade-off is English-only voices; Hindi output falls back to English pronunciation, which is acceptable for a Hinglish-heavy user base.
+The original TTS was Edge TTS (Microsoft). It worked but added ~1 second of network round-trip latency per spoken phrase. Kokoro-82M runs locally at ~150–200ms per phrase with no API key and no external dependency. The trade-off is English-only voices, but for a platform where most users speak Hinglish rather than pure Hindi, this is acceptable.
 
-### Sentence-level TTS streaming, not full-response
+### Sentence-level TTS streaming instead of full-response
 
-Waiting for the LLM to finish before sending anything to TTS adds the full generation time to perceived latency. Instead, the orchestrator accumulates LLM tokens into a buffer and fires TTS as soon as a sentence boundary is found or ~100 characters accumulate. The first audio chunk reaches the browser within ~700ms of the LLM producing its first sentence, while generation continues in the background.
+If TTS waits for the LLM to finish generating before it starts, the user sits in silence for the entire generation time. Instead, the pipeline flushes the TTS queue every time a sentence boundary is found or ~100 characters have accumulated. The first audio chunk plays ~700ms after the LLM produces its first sentence, while generation continues in the background. This is the main reason perceived latency feels shorter than the raw numbers suggest.
 
-### Serial TTS queue instead of concurrent tasks
+### Serial TTS queue over concurrent tasks
 
-Kokoro's `KPipeline` is not thread-safe — calling it from multiple threads simultaneously corrupts output. A single async worker drains phrases from a queue one at a time. This also guarantees audio arrives at the browser in the correct order, which concurrent tasks cannot.
+Running multiple Kokoro inference calls concurrently from different threads causes audio corruption — Kokoro's `KPipeline` is not thread-safe. A single async worker processes one phrase at a time from a queue. This also guarantees audio plays in the correct order, something concurrent tasks cannot provide.
 
-### VAD gating before ASR
+### VAD before ASR
 
-Parakeet RNNT is always loaded on GPU, but only invoked when silero-VAD confirms a complete utterance (700ms silence after speech). Without VAD, ASR would run on every microphone noise. VAD adds ~0ms overhead since it runs on CPU in under 5ms per chunk.
+Running Parakeet on every microphone sample would be wasteful and slow. Silero-VAD runs on CPU in under 5ms per chunk and only signals the ASR when a complete utterance is detected (speech followed by 700ms silence). This means Parakeet only runs when there is actually something worth transcribing.
 
-### BGE-M3 for retrieval embeddings
+### BGE-M3 for embeddings
 
-BGE-M3 supports dense retrieval across multilingual text, which matters because JarvisLabs docs mix English and transliterated Hindi. Alternatives like `text-embedding-ada-002` require an API call per query; BGE-M3 runs locally and returns embeddings in ~32ms warm.
+BGE-M3 is multilingual and handles the mix of English and transliterated Hindi in JarvisLabs documentation. It runs locally (no API cost per query) and returns embeddings in ~32ms warm. A cloud embedding API would add network latency and cost on every user query.
+
+---
+
+## Latency
+
+Measured on JarvisLabs A100 40GB, all models warm:
+
+| Stage | Time |
+|-------|------|
+| ASR (Parakeet RNNT 1.1B) | 129 ms |
+| RAG (BGE-M3 + ChromaDB) | 32 ms |
+| LLM (Qwen3-32B-AWQ, ~100 tokens) | 22,446 ms |
+| TTS first chunk (Kokoro-82M) | 200 ms |
+| **Total end-to-end** | **~22,800 ms** |
+
+**What I did to bring latency down:**
+- Switched TTS from Edge TTS (cloud, ~1s/phrase) to Kokoro (local, ~200ms/phrase)
+- Added sentence-level streaming so users hear audio before the LLM finishes
+- Capped `LLM_MAX_TOKENS` at 100 to keep responses short and generation fast
+- RAG reduced to `TOP_K=3` — fewer retrieved chunks means shorter context and faster LLM prefill
+
+The LLM at ~22 seconds is the dominant bottleneck. Everything else is negligible.
 
 ---
 
 ## What I used AI for
 
-**Used AI for:**
-- Initial instance setup and vLLM launch commands — I had not previously configured cloud GPU servers from scratch and used AI to generate the correct flags and environment variables
-- Boilerplate wiring between pipeline stages (VAD → ASR → RAG → LLM → TTS) — the async task structure and WebSocket protocol were AI-generated
-- Debugging non-obvious failures: Parakeet returning `Hypothesis` objects instead of strings, Qwen3 emitting `<think>` tokens in voice output, WebSocket requiring `wss://` behind an HTTPS proxy
+**Where AI helped:**
+- **Instance setup:** I had not configured cloud GPU servers from scratch before. I used AI to get the right vLLM flags (`--gpu-memory-utilization`, `--max-model-len`, `FLASHINFER_DISABLE_VERSION_CHECK`) and understand how to size VRAM allocation across models running on the same GPU.
+- **Pipeline wiring:** The async connection code between VAD → ASR → RAG → LLM → TTS — specifically the WebSocket protocol, AudioWorklet setup, and the streaming token-to-TTS buffer logic — was generated with AI assistance.
+- **Debugging:** Several failures were non-obvious. AI helped identify that Parakeet returns `Hypothesis` objects (not strings), that Qwen3 emits `<think>` tokens in voice output, and that WebSocket connections require `wss://` behind an HTTPS proxy.
 
-**Done manually:**
-- All architecture decisions: model selection, TTS backend evaluation (ruled out Voxtral, Fish Speech, and Edge TTS through hands-on testing on the actual instance)
-- Parameter tuning: `gpu-memory-utilization`, `LLM_MAX_TOKENS`, VAD thresholds, chunk sizes — verified against real VRAM usage and response quality
-- API and connection verification: manually tested each stage end-to-end before wiring the next one in
-- Knowledge base scope: decided which JarvisLabs pages to scrape and what chunk size preserved enough context
-- Override: AI initially suggested concurrent TTS tasks; I identified the thread-safety issue from garbled audio in logs and switched to a serial queue
-
----
-
-## Measured latency
-
-Measured on a JarvisLabs A100 40GB instance, warm (all models loaded):
-
-| Stage | Latency |
-|-------|---------|
-| ASR (Parakeet RNNT 1.1B) | 129 ms |
-| RAG (BGE-M3 + ChromaDB, 702 chunks) | 32 ms |
-| LLM (Qwen3-32B-AWQ, ~100 tokens) | 22,446 ms |
-| TTS first chunk (Kokoro-82M) | 200 ms |
-| **End-to-end** | **~22,800 ms** |
-
-**What reduced latency:**
-- Sentence-level TTS streaming: user hears the first sentence ~700ms after LLM starts generating, not after it finishes
-- `LLM_MAX_TOKENS=100` keeps responses short and generation fast
-- Kokoro local TTS eliminated the ~1s/phrase Edge TTS network round trip
-- BGE-M3 warm retrieval at 32ms vs ~5s cold (lazy load amortized after first query)
-
-The dominant bottleneck is LLM generation at ~22 seconds. This is a function of model size; a smaller or faster model is the primary lever.
-
----
-
-## Sample interaction
-
-**User says:** *"Tell me about available GPUs I can purchase on JarvisLabs"*
-
-**Expected response:**
-> JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
+**What I did myself:**
+- Evaluated and rejected multiple TTS options (Voxtral — ASR-only, not TTS; Fish Speech — proprietary codec not in any open-source release; Edge TTS — too slow) through hands-on testing, not from AI suggestions
+- Verified every API connection and parameter manually before moving to the next stage — GPU memory allocation, VAD thresholds, chunk sizes, LLM context limits
+- Identified the Kokoro thread-safety bug from garbled audio in logs and overrode AI's suggestion of concurrent TTS tasks in favour of a serial queue
+- Decided the knowledge base scope: which pages to scrape, chunk size, overlap, and collection structure
 
 ---
 
 ## What I would change with 4 more weeks
 
-**1. Cut LLM latency with a smaller distilled model**
-The 22-second LLM time dominates everything else. I would fine-tune or use a smaller model (7B–14B) specifically on JarvisLabs docs and FAQs. A well-tuned 7B model would generate in ~3–4 seconds and stay on topic, making the conversation feel genuinely real-time.
+**1. Reduce LLM latency**
+At ~22 seconds, LLM generation is the only thing that makes the conversation feel slow. With more time I would evaluate a smaller, faster model — a well-tuned 7B or 14B fine-tuned specifically on JarvisLabs documentation — which would generate in 2–4 seconds and keep the assistant on topic without needing a 32B model.
 
-**2. Richer, more verifiable answers**
-Right now the LLM can paraphrase or hallucinate pricing and GPU specs. I would add structured data — JSON pricing tables, GPU spec sheets — alongside scraped text in the knowledge base, and instruct the model to cite specific values. This makes wrong answers easier to catch and correct.
+**2. More grounded and verifiable outputs**
+The current RAG retrieves scraped webpage text, which means the LLM can paraphrase or extrapolate pricing and specs. I would add structured data sources — actual pricing tables, GPU spec JSON, support ticket categories — and instruct the model to quote specific numbers rather than summarise. This makes hallucinations easier to catch and the answers easier to trust.
 
-**3. Streaming TTS audio output**
-Kokoro synthesizes an entire phrase before sending any audio. A streaming-capable TTS model would start sending audio within 50ms of synthesis beginning, cutting per-phrase TTS latency from ~200ms to near-zero perceived gap and making the assistant feel significantly more responsive.
+**3. Streaming TTS**
+Kokoro generates a full phrase before sending any audio. A streaming-capable TTS model would begin sending audio within 50ms of synthesis starting, cutting per-phrase TTS latency from ~200ms to near-zero perceived delay and making the conversation feel genuinely instant.
 
 **4. Native Hindi voice**
-Kokoro only has English voices, so Hindi and Hinglish responses are pronounced with an English accent. Adding a lightweight Hindi TTS model (a fine-tuned VITS on an Indian English/Hindi corpus) as a fallback when Devanagari or strong Hindi phrasing is detected would make the assistant feel native to Indian users, which is the core JarvisLabs audience.
-
----
-
-## Stack
-
-| Component | Model / Library |
-|-----------|----------------|
-| ASR | `nvidia/parakeet-rnnt-1.1b` via NeMo |
-| VAD | `silero-vad v5` |
-| Embeddings | `BAAI/bge-m3` via FlagEmbedding |
-| Vector DB | ChromaDB (persistent, local) |
-| LLM | `Qwen/Qwen3-32B-AWQ` via vLLM |
-| TTS | `hexgrad/Kokoro-82M`, voice `af_heart` |
-| Backend | FastAPI + WebSocket |
-| Frontend | Vanilla JS + Web Audio API + AudioWorklet |
+Kokoro pronounces Hindi and Hinglish in an English accent. Adding a lightweight Hindi-trained TTS model as a fallback — triggered automatically when Devanagari script or strong Hindi phrasing is detected — would make the assistant feel natural to Indian users, who are the core JarvisLabs audience.
