@@ -16,11 +16,11 @@ I faced this problem myself. When I first tried to navigate JarvisLabs, I wasn't
 
 ## Try it yourself
 
-**Live:** [https://jarvis-assignment.vercel.app](https://jarvis-assignment.vercel.app)
+**Live:** [https://6bd4684165461.notebooksn.jarvislabs.net](https://6bd4684165461.notebooksn.jarvislabs.net)
 
 Open the link, click the mic button, and ask a question. The assistant responds in spoken audio.
 
-> Note: the assistant runs on a JarvisLabs A100 instance. If the instance is paused, use the sample transcript below as a fallback or run it locally using the instructions further down.
+> Note: the assistant runs on a JarvisLabs A100 instance. If the instance is not active, follow the **How to run it** section below to spin up your own instance and access it via its public API URL.
 
 ---
 
@@ -95,6 +95,7 @@ TOP_K=3
 ### 3. Start vLLM
 
 ```bash
+HF_HOME=/home/.cache/huggingface \
 FLASHINFER_DISABLE_VERSION_CHECK=1 python -m vllm.entrypoints.openai.api_server \
   --model Qwen/Qwen3-32B-AWQ \
   --quantization awq \
@@ -116,7 +117,7 @@ Scrapes `jarvislabs.ai`, chunks the content, embeds with BGE-M3, and stores in C
 ### 5. Start the server
 
 ```bash
-python -m uvicorn api.server:app --host 0.0.0.0 --port 6006
+cd /home/jarvis-assignment && python -m uvicorn api.server:app --host 0.0.0.0 --port 6006
 ```
 
 ### 6. Open in browser
