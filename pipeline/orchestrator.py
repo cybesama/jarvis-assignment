@@ -190,15 +190,15 @@ class ConversationSession:
             full_text += token
             await self.callbacks.on_response_text(token)
 
-            # Flush on sentence boundary OR after ~60 chars at a word boundary
+            # Flush on sentence boundary OR after ~100 chars at a word boundary
             sentences = split_sentences(token_buffer)
             flush_phrases = []
             if len(sentences) >= 2:
-                ready = [s for s in sentences[:-1] if len(s) >= 20]
+                ready = [s for s in sentences[:-1] if len(s) >= 30]
                 if ready:
                     flush_phrases = ready
                     token_buffer = sentences[-1]
-            elif len(token_buffer) >= 60 and token_buffer[-1] == " ":
+            elif len(token_buffer) >= 100 and token_buffer[-1] == " ":
                 flush_phrases = [token_buffer.strip()]
                 token_buffer = ""
 
