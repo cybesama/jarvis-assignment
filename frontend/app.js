@@ -26,11 +26,12 @@ const waveCtx       = waveCanvas.getContext("2d");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let ws           = null;
-let audioCtx     = null;
+let audioCtx     = null;      // mic capture context (16kHz)
+let playCtx      = null;      // playback context (24kHz) — created on first gesture
 let workletNode  = null;
 let micStream    = null;
 let micActive    = false;
-let playQueue    = [];       // ArrayBuffer queue for TTS audio
+let playQueue    = [];
 let isPlaying    = false;
 let nextPlayTime = 0;
 let analyser     = null;
@@ -42,8 +43,7 @@ function connectWS() {
   ws.binaryType = "arraybuffer";
 
   ws.onopen = () => {
-    setStatus("listening", "Listening");
-    startMic();
+    setStatus("idle", "Connected — press mic to speak");
   };
 
   ws.onclose = () => {
@@ -144,6 +144,7 @@ function stopMic() {
 }
 
 micBtn.addEventListener("click", async () => {
+  ensurePlayCtx();   // unlock audio on first gesture
   if (micActive) {
     stopMic();
     setStatus("idle", "Mic off");
@@ -163,7 +164,16 @@ resetBtn.addEventListener("click", () => {
 });
 
 // ── TTS playback ──────────────────────────────────────────────────────────────
+function ensurePlayCtx() {
+  if (!playCtx || playCtx.state === "closed") {
+    playCtx = new AudioContext({ sampleRate: PLAY_SR });
+    nextPlayTime = 0;
+  }
+  if (playCtx.state === "suspended") playCtx.resume();
+}
+
 async function enqueueAudio(wavBuffer) {
+  ensurePlayCtx();
   playQueue.push(wavBuffer);
   if (!isPlaying) drainQueue();
 }
@@ -171,9 +181,9 @@ async function enqueueAudio(wavBuffer) {
 async function drainQueue() {
   if (playQueue.length === 0) { isPlaying = false; return; }
   isPlaying = true;
+  ensurePlayCtx();
   const buf = playQueue.shift();
 
-  const playCtx = new AudioContext({ sampleRate: PLAY_SR });
   try {
     const decoded = await playCtx.decodeAudioData(buf);
     const source  = playCtx.createBufferSource();
@@ -184,13 +194,9 @@ async function drainQueue() {
     source.start(now);
     nextPlayTime = now + decoded.duration;
 
-    source.onended = () => {
-      playCtx.close();
-      drainQueue();
-    };
+    source.onended = () => drainQueue();
   } catch (e) {
     console.warn("Audio decode error:", e);
-    playCtx.close();
     drainQueue();
   }
 }
