@@ -16,7 +16,11 @@ I faced this problem myself. When I first tried to navigate JarvisLabs, I wasn't
 
 ## Try it yourself
 
-The assistant is not publicly deployed yet. Run it locally using the instructions below, or see the fallback transcript and proof-of-work below.
+**Live:** [https://6bd4684165461.notebooksn.jarvislabs.net/](https://6bd4684165461.notebooksn.jarvislabs.net/)
+
+Open the link, click the mic button, and ask a question. The assistant responds in spoken audio.
+
+> Note: the assistant runs on a JarvisLabs A100 instance. If the instance is paused, use the sample transcript below as a fallback or run it locally using the instructions further down.
 
 ---
 
@@ -38,15 +42,19 @@ The user hears the first spoken sentence within ~700ms of the LLM starting to ge
 
 **The assistant is grounded and stays on topic.** Jarvina knows it is a JarvisLabs assistant and refuses off-topic questions. All answers are grounded in retrieved content from `jarvislabs.ai` — it will not make up pricing or specs.
 
-**Sample transcript:**
+**Sample audio clip + expected response (fallback):**
 
-> **User:** *"Tell me about available GPUs I can purchase on JarvisLabs"*
->
-> **Jarvina:** JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
+🎙️ [sample_query.mp3](sample_query.mp3) — *"Tell me about available GPUs I can purchase on JarvisLabs"*
 
-> **User:** *"What is the capital of France?"*
->
-> **Jarvina:** Main sirf JarvisLabs ke baare mein help kar sakta hoon. — I can only help with JarvisLabs-related questions.
+**Expected response:**
+> JarvisLabs offers several high-performance NVIDIA GPUs for rent, including H200, H100, A100, A6000, A5000, and L4. These GPUs are available in regions like IN2 and EU1. You can check current pricing and availability via the JarvisLabs dashboard or the SDK. Let me know if you'd like details on a specific GPU!
+
+**On-topic / off-topic behaviour:**
+
+| User input | Jarvina |
+|-----------|---------|
+| "Tell me about available GPUs" | Answers with GPU list, regions, pricing pointer |
+| "What is the capital of France?" | "Main sirf JarvisLabs ke baare mein help kar sakta hoon." |
 
 ---
 

@@ -1,0 +1,7 @@
+{
+  "outputDirectory": "frontend",
+  "buildCommand": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}

@@ -9,7 +9,9 @@
  *   WebSocket binary frames (WAV) → decode → AudioBuffer queue → AudioContext
  */
 
-const WS_URL  = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
+// Connect to JarvisLabs backend regardless of where the frontend is hosted
+const BACKEND  = "6bd4684165461.notebooksn.jarvislabs.net";
+const WS_URL   = `wss://${BACKEND}/ws`;
 const PLAY_SR = 24000;   // TTS output sample rate
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
